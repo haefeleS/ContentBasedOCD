@@ -1,12 +1,15 @@
 package i5.las2peer.services.servicePackage.entities;
 
+import java.net.HttpURLConnection;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.util.LinkedList;
-import java.util.List;
+
+import i5.las2peer.restMapper.HttpResponse;
+import i5.las2peer.security.Context;
 
 /*import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -18,65 +21,108 @@ import i5.las2peer.services.servicePackage.preprocessing.TextProcessor;
 
 public class EntityManagement {
 	
-	public void persistNewNode(ResultSet rs, Connection conn) throws Exception{
+	public void createNodeTable(Connection conn) throws Exception{
+		Statement stmnt = null;
+		stmnt = conn.createStatement();
+		stmnt.executeUpdate("create table if not exists node ("+ "nodeid int not null auto_increment primary key," +"userid varchar(255),"+ " content text," + "graphid int)");
+		
+	}
+	
+	public void createGraphTable(Connection conn) throws Exception{
+		Statement stmnt = null;
+		stmnt = conn.createStatement();
+		stmnt.executeUpdate("create table if not exists graph ("+ "graphid int not null auto_increment primary key," +"origin varchar(255))");
+		
+	}
+	
+	public Graph persistNewGraph(ResultSet rs, Connection conn) throws Exception{
+		
+		PreparedStatement stmnt = null;
+	    PreparedStatement stmnt1 = null;
 		
 		try{
 		    ResultSetMetaData rsmd = rs.getMetaData();
 		    String dataset = rsmd.getTableName(1);
-		    List<Node> temp = new LinkedList<Node>();
-		    PreparedStatement stmnt = null;
-		    int i = 0;
+		    Graph graph = new Graph();
+		    String author = null;
+		    String content = "";
+		    String tempString = "";
+		    LinkedList<Node> nodes = new LinkedList<Node>();
 		    
 		    
-		    // read the existing entries
-		    //PreparedStatement stmnt = conn.prepareStatement("select graphid from graph where origin = ? ;");
-		    //stmnt.setString(1, dataset);
-		    //Query q = em.createQuery("select graphid from graph where origin = ? ");
-		    //q.setParameter(1, dataset);
+		    int graphid = 0;
+		    int nodeid = 0;
 		    
-		    //boolean createEntry = (q.getResultList().size() == 0);
-		    
-		    //if(createEntry){
-		    	//Graph graph = new Graph();
-		    	//graph.setOrigin(dataset);
-		    	
-		    while(rs.next()){
-		    		Node node = new Node();
-		    		node.setUserID(rs.getString("author"));
-		    		node.setContent(rs.getString("content"));
-		    		
-		    		String temp1 = node.getUserID();
-		    		String temp2 = node.getContent();
-		    		
-		    		stmnt = conn.prepareStatement("insert into node (nodeid,userid, content) values(?, ?, ?)");
-		    		stmnt.setInt(1, i);
-		    		stmnt.setString(2,temp1);
-		    		stmnt.setString(3, temp2);
-		    		stmnt.executeUpdate();
-		    		
-		    		
-		    		i++;
-		    		//temp.add(node);
-		    		
+		    stmnt1 = conn.prepareStatement("insert into graph (origin) values(?)", Statement.RETURN_GENERATED_KEYS);
+    		stmnt1.setString(1, dataset);
+    		stmnt1.executeUpdate();
+    		ResultSet res = stmnt1.getGeneratedKeys();
+    		if(res.next()){
+    			graphid = res.getInt(1);
+    		}
+    		stmnt1.close();
+    		graph.setGraphID(graphid);
+    		graph.setOrigin(dataset);
+    		graph.setNodes(nodes);
+    		
+    		while(rs.next()){
+		    	author = rs.getString("author");
+		    	content = rs.getString("content");
+		    	if(!rs.next()){
+		    		break;
 		    	}
-		    	stmnt.close();
-		    	//graph.setNodes(temp);
-		    	//em.persist(graph);
-		    //}
-		    //em.getTransaction().commit();
+		    	
+		    	
+		    	while(rs.getString("author").equals(author)){
+		    		
+		    		content = content + rs.getString("content");
+		    		if(!rs.next()){
+		    			break;
+		    		}
+
+		    		/*if(!rs.getString("author").equals(author)&& rs.isLast()){
+			    		rs.previous();
+			    		break;
+		    		}*/
+		    	}
+			    rs.previous(); 
+		    
+		    	Node node = new Node();
+    			node.setUserID(author);
+	    		node.setContent(content);
+	    		
+	    		String temp1 = node.getUserID();
+	    		String temp2 = node.getContent();
+	    				    		
+	    		stmnt = conn.prepareStatement("insert into node (userid, content, graphid) values(?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
+	    		stmnt.setString(1,temp1);
+	    		stmnt.setString(2, temp2);
+	    		stmnt.setInt(3, graphid);
+	    		stmnt.executeUpdate();
+	    		ResultSet res1 = stmnt.getGeneratedKeys();
+	    		if(res1.next()){
+	    			nodeid = res1.getInt(1);
+	    		}
+	    		 
+	    		node.setNodeID(nodeid);
+	    		
+	    		graph.addNodes(node);
+		    }
+	    		stmnt.close();
 	    
+		return graph;
 	    
 	    }catch(Exception e){
-	    	/*if( et != null && et.isActive() ) {
-				et.rollback();
-			}*/
-	    	
-	    	
+	    	if (stmnt != null) {
+				try {
+					stmnt.close();
+				} catch (Exception ex) {
+					Context.logError(this, ex.getMessage());
+				}
+			}	    	
+	    	return null;
 	    }
 	    
-	    //em.close();
-	    //factory.close();
-	     
 	}
 	
 	public void persistNewLinkedNode(ResultSet rs, Connection conn) throws Exception{

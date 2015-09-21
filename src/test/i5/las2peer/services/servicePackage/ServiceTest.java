@@ -165,7 +165,7 @@ public class ServiceTest {
 		try
 		{
 			c.setLogin(Long.toString(testAgent.getId()), testPass);
-			ClientResponse result = c.sendRequest("GET", mainPath + "linkedGraphs/graphweight", ""); // testInput is
+			ClientResponse result = c.sendRequest("GET", mainPath + "graphs/termmatrix", ""); // testInput is
 																										// the pathParam
 			assertEquals(200, result.getHttpCode());
 			assertTrue(result.getResponse().trim().contains("testInput")); // "testInput" name is part of response

@@ -1,8 +1,11 @@
 package i5.las2peer.services.servicePackage.entities;
 
+import java.util.LinkedList;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.persistence.*;
+
 
 @Entity
 public class Graph {
@@ -12,9 +15,9 @@ public class Graph {
 	private int graphID;
 	private String origin; 		//data set the graph is based on
 	@OneToMany(mappedBy = "graph")
-	private List<Node> nodes;
+	private LinkedList<Node> nodes;
 	@OneToMany(mappedBy = "graph")
-	private List<LinkedNode> linkedNodes;
+	private LinkedList<LinkedNode> linkedNodes;
 	
 	/////////////////////////
 	////Getter and Setter////
@@ -37,20 +40,39 @@ public class Graph {
 	}
 	
 	
-	public List<Node> getNodes(){
+	public LinkedList<Node> getNodes(){
 		return this.nodes;
 	}
 	
-	public void setNodes(List<Node> nodes){
+	public void setNodes(LinkedList<Node> nodes){
 		this.nodes = nodes;
 	}
 	
-	public List<LinkedNode> getLinkedNodes(){
+	public LinkedList<LinkedNode> getLinkedNodes(){
 		return this.linkedNodes;
 	}
 	
-	public void setLinkedNodes(List<LinkedNode> linkedNodes){
+	public void setLinkedNodes(LinkedList<LinkedNode> linkedNodes){
 		this.linkedNodes = linkedNodes;
+	}
+	
+	////////////////////////
+	////Update Functions////
+	////////////////////////
+	
+	public void addNodes(Node node){
+		nodes.add(node);
+	}
+	
+	public void deleteNode(int nodeid){
+		Node node = new Node();
+		
+		for(Iterator<Node>it = this.nodes.iterator(); it.hasNext();){
+			node = it.next();
+			if(node.getNodeID() == nodeid){
+				this.nodes.remove(node);
+			}
+		}
 	}
 	
 }

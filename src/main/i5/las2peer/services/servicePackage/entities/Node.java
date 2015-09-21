@@ -4,7 +4,7 @@ package i5.las2peer.services.servicePackage.entities;
 
 import i5.las2peer.services.servicePackage.preprocessing.TextProcessor;
 
-//@Entity
+
 public class Node {
 
 	//@Id
@@ -13,7 +13,7 @@ public class Node {
 	private String userID;
 	//@ManyToOne(fetch=FetchType.LAZY)
 	//@JoinColumn(name = "GRAPHID")
-	private Graph graph;
+	//private Graph graph;
 	private String content;
 	private TextProcessor textproc = new TextProcessor();
 	
@@ -46,11 +46,11 @@ public class Node {
 		  this.content = textproc.preprocText(content);
 		  }
 	  
-	  public Graph getGraph(){
+	 /* public Graph getGraph(){
 		  return graph;
 	  }
 	  
 	  public void setGraph(Graph graph){
 		  this.graph = graph;
-	  }
+	  }*/
 }

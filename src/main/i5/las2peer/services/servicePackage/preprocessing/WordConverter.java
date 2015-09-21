@@ -4,6 +4,7 @@ import i5.las2peer.services.servicePackage.entities.EntityManagement;
 import i5.las2peer.services.servicePackage.entities.LinkedNode;
 import i5.las2peer.services.servicePackage.entities.Node;
 import i5.las2peer.services.servicePackage.ocd.Similarities;
+import i5.las2peer.services.servicePackage.ocd.Termmatrix;
 import i5.las2peer.services.servicePackage.util.ToJSON;
 
 import java.sql.Connection;
@@ -22,9 +23,80 @@ import org.json.JSONObject;
 
 public class WordConverter {
 	
-	public JSONArray convertTFIDF(LinkedList<Node> nodes) throws Exception{
+	public Termmatrix convertTFIDF(LinkedList<Node> nodes) throws Exception{
 		LinkedList<String> wordlist = new LinkedList<String>();
-		LinkedList<String> wordlistdup = new LinkedList<String>();
+		WordConverter conv = new WordConverter();
+		String threads = "";
+		String word = null;
+		int column = 0;
+		int row = 0;
+		Log log = new Log();
+		LinkedList<Integer> nodeids = new LinkedList<Integer>();
+		Termmatrix res = new Termmatrix();
+		res.setNodelist(nodeids);
+
+		for(Iterator<Node> it = nodes.iterator(); it.hasNext();){ 
+			Node currNode = it.next();
+			threads = currNode.getContent()+ " " + threads;      // compute all concatenated threads
+			
+			/*for(Iterator<Node> it2 = tempList.iterator(); it2.hasNext();){ //group by users
+				Node currTemp = it2.next();
+				if(currTemp.getUserID().equals(currNode.getUserID())){
+					currTemp.setContent(currTemp.getContent()+currNode.getContent());
+					add = false;
+				}
+				
+			}
+			if(add){
+				tempList.add(currNode);
+			}*/			
+		}
+		
+		//int nodesSize = tempList.size();
+		int nodesSize = nodes.size();
+		
+		if(threads == null || threads.isEmpty()){
+			return null;
+		}
+		
+		wordlist = conv.listWords(threads);
+		res.setWordlist(wordlist);
+		//wordlistdup = listWordsDup(threads);
+		//len = stringLength(thread);
+		
+		Array2DRowRealMatrix matrix = new Array2DRowRealMatrix(nodesSize ,wordlist.size());
+		
+		for(Iterator<Node>iter = nodes.iterator(); iter.hasNext();){
+			Node node = iter.next();
+			res.addNode(node.getNodeID());
+			String thr = node.getContent();
+			LinkedList<String> temp = conv.listWordsDup(thr);
+			RealVector vector = new ArrayRealVector(wordlist.size());
+			
+			for(Iterator<String> it = wordlist.iterator(); it.hasNext();){
+				word = it.next();
+				int freq = conv.countWord(word, temp);
+				int docFreq = conv.countDoc(word, nodes);
+				double tfidf = freq * log.value((double)nodesSize/docFreq);
+				
+				vector.setEntry(column, tfidf);
+				column++;
+			}
+			column = 0;
+			matrix.setRowVector(row, vector);
+			row++;
+		}
+		
+		res.setMatrix(matrix);//json = converter.matrixToJson(matrix, wordlist);
+		
+		//return json;
+		return res;
+	}
+	
+	
+	/*public Array2DRowRealMatrix convertTFIDF(LinkedList<Node> nodes) throws Exception{
+		LinkedList<String> wordlist = new LinkedList<String>();
+		//LinkedList<String> wordlistdup = new LinkedList<String>();
 		JSONArray json = new JSONArray();
 		ToJSON converter = new ToJSON();
 		String threads = "";
@@ -40,7 +112,7 @@ public class WordConverter {
 			Node currNode = it.next();
 			threads = currNode.getContent() + threads;      // compute all concatenated threads
 			
-			for(Iterator<Node> it2 = tempList.iterator(); it2.hasNext();){ //group by users
+			/*for(Iterator<Node> it2 = tempList.iterator(); it2.hasNext();){ //group by users
 				Node currTemp = it2.next();
 				if(currTemp.getUserID().equals(currNode.getUserID())){
 					currTemp.setContent(currTemp.getContent()+currNode.getContent());
@@ -50,17 +122,18 @@ public class WordConverter {
 			}
 			if(add){
 				tempList.add(currNode);
-			}			
-		}
+			}*/			
+		/*}
 		
-		int nodesSize = tempList.size();
+		//int nodesSize = tempList.size();
+		int nodesSize = nodes.size();
 		
 		if(threads == null || threads.isEmpty()){
 			return null;
 		}
 		
 		wordlist = listWords(threads);
-		wordlistdup = listWordsDup(threads);
+		//wordlistdup = listWordsDup(threads);
 		//len = stringLength(thread);
 		
 		Array2DRowRealMatrix matrix = new Array2DRowRealMatrix(nodesSize ,wordlist.size());
@@ -73,7 +146,7 @@ public class WordConverter {
 			for(Iterator<String> it = wordlist.iterator(); it.hasNext();){
 				word = it.next();
 				int freq = countWord(word, temp);
-				int docFreq = countWord(word, wordlistdup);
+				int docFreq = countDoc(word, nodes);
 				double tfidf = freq * log.value((double)nodesSize/docFreq);
 				
 				vector.setEntry(column, tfidf);
@@ -83,10 +156,11 @@ public class WordConverter {
 			matrix.setRowVector(row, vector);
 			row++;
 		}
-		json = converter.matrixToJson(matrix, wordlist);
+		//json = converter.matrixToJson(matrix, wordlist);
 		
-		return json;
-	}
+		//return json;
+		return matrix;
+	}*/
 	
 	/*private int stringLength(String thread){
 		int count = 0;
@@ -106,7 +180,7 @@ public class WordConverter {
 		return count;
 	}*/
 	
-	private int countWord(String word, LinkedList<String> list){
+	public int countWord(String word, LinkedList<String> list){
 		int res = 0;
 		for(Iterator<String> it = list.iterator(); it.hasNext();){
 			if(word.equals(it.next())){
@@ -117,7 +191,21 @@ public class WordConverter {
 		return res;
 	}
 	
-	private LinkedList<String> listWords(String thread){
+	public int countDoc(String word, LinkedList<Node> nodes){
+		int res = 0;
+		Node node = new Node();
+		CharSequence wordSeq = word;
+		
+		for(Iterator<Node> it = nodes.iterator(); it.hasNext();){
+			node = it.next();
+			if(node.getContent().contains(wordSeq)){
+				res++;
+			}
+		}
+		return res;
+	}
+	
+	public LinkedList<String> listWords(String thread){
 		LinkedList<String> res = new LinkedList<String>();
 		int begin = 0;
 		int end = 0;
@@ -156,7 +244,7 @@ public class WordConverter {
 		return res;
 	}
 	
-	private LinkedList<String> listWordsDup(String thread){
+	public LinkedList<String> listWordsDup(String thread){
 		LinkedList<String> res = new LinkedList<String>();
 		int begin = 0;
 		int end = 0;

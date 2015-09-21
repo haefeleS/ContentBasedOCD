@@ -9,6 +9,9 @@ import org.apache.commons.math3.linear.RealMatrix;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import i5.las2peer.services.servicePackage.entities.Graph;
+import i5.las2peer.services.servicePackage.ocd.Termmatrix;
+
 public class ToJSON{
 
 	public JSONArray toJSONArray(ResultSet rs) throws Exception{
@@ -85,6 +88,35 @@ public class ToJSON{
 		}
 		
 		return result;
+	}
+	
+	public JSONObject graphToJson(Graph graph) throws Exception{
+		JSONObject res = new JSONObject();
+		res.put("GraphID", graph.getGraphID());
+		res.put("Origin", graph.getOrigin());
+		return res;
+	}
+	
+	public JSONArray termmatrixToJson(Termmatrix termMat) throws Exception{
+		JSONArray result = new JSONArray();
+		RealMatrix matrix = termMat.getMatrix();
+		int rows = matrix.getRowDimension();
+		int columns = matrix.getColumnDimension();
+		Iterator<Integer> iter = termMat.getNodeIdList().iterator();
+
+		for(int i = 0; i < rows; i++){
+			JSONObject obj = new JSONObject();
+			obj.put("nodeid",iter.next());
+			Iterator<String> it = termMat.getWordlist().iterator();
+			
+			for(int j = 0; j < columns; j++){
+				obj.put(it.next(),matrix.getEntry(i,j));
+			}
+			result.put(obj);
+		}
+		
+		return result;
+		
 	}
 			
 }		

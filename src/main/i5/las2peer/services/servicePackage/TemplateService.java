@@ -7,7 +7,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.LinkedList;
+import java.util.List;
 
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+import javax.persistence.Query;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -31,8 +36,10 @@ import i5.las2peer.security.Context;
 import i5.las2peer.security.UserAgent;
 import i5.las2peer.services.servicePackage.database.DatabaseManager;
 import i5.las2peer.services.servicePackage.entities.EntityManagement;
+import i5.las2peer.services.servicePackage.entities.Graph;
 import i5.las2peer.services.servicePackage.entities.LinkedNode;
 import i5.las2peer.services.servicePackage.entities.Node;
+import i5.las2peer.services.servicePackage.ocd.Termmatrix;
 import i5.las2peer.services.servicePackage.preprocessing.TextProcessor;
 import i5.las2peer.services.servicePackage.preprocessing.WordConverter;
 import i5.las2peer.services.servicePackage.util.ToJSON;
@@ -177,6 +184,7 @@ public class TemplateService extends Service {
 		PreparedStatement stmnt = null;
 		ResultSet rs = null;
 		try {
+			
 			// get connection from connection pool
 			conn = dbm.getConnection();
 
@@ -315,48 +323,47 @@ public class TemplateService extends Service {
 	}
 	
 	@GET
-	@Path("/persist/nodes/urch")
+	@Path("/persist/graph/{dataset}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public HttpResponse getNewGraph() {
+	public HttpResponse getNewGraph(@PathParam("dataset") String dataset) {
 		Connection conn = null;
 		PreparedStatement stmnt = null;
-		Statement stmnt1 = null;
 		ResultSet rs = null;
 		ToJSON converter = new ToJSON();
-		TextProcessor tp = new TextProcessor();
-		JSONArray json = new JSONArray();
+		JSONObject json = new JSONObject();
 		EntityManagement em = new EntityManagement();
-		WordConverter wordConv = new WordConverter();
-		Array2DRowRealMatrix matrix = new Array2DRowRealMatrix();
+		String query = null;
+		Graph graph = new Graph();
 		
 		try{
 			// get connection from connection pool
 			conn = dbm.getConnection();
+			
+			switch(dataset){
+			case "urch": query = "SELECT id,content,author FROM urch order by author";
+						break;
+			case "stdoctor": query = "SELECT id, content author FROM stdoctor order by author";
+						break;
+			}
 
 			// prepare statement
-			stmnt = conn.prepareStatement("SELECT id,content,author FROM urch;");
+			stmnt = conn.prepareStatement(query);
 			//stmnt.setString(1, dataSet);
 
 			// retrieve result set
 			rs = stmnt.executeQuery();
-			//rs1 = stmnt.executeQuery();
 			
-			//json = converter.toJSONArray(rs);
+			//create necessary tables
+			em.createNodeTable(conn);
+			em.createGraphTable(conn);
 			
-			stmnt1 = conn.createStatement();
-			stmnt1.executeUpdate("create table node ("+ "nodeid int not null primary key," +"userid varchar(255),"+ " content varchar(5000))");
+			//persist graph built form dataset
+			graph = em.persistNewGraph(rs, conn);
 			
-			em.persistNewNode(rs, conn);
-			//LinkedList<Node> nodes = em.listNodes(rs);	// listing nodes and textpreprocessing of content
-			//json = wordConv.convertTFIDF(nodes);		// creating term matrix, computing tf- idf, converting to json array for visualizationoi
+			//for print information about persisted graph
+			json = converter.graphToJson(graph);
 			
-			
-			
-			//json = converter.toJSONArray(rs);
-			//json = tp.executeTextProc(json); 
-			
-						
-			return new HttpResponse("Data saved in database" , HttpURLConnection.HTTP_OK);
+			return new HttpResponse("Graph with "+ json.toString() + " saved in database" , HttpURLConnection.HTTP_OK);
 			
 		}catch(Exception e){
 			
@@ -406,20 +413,31 @@ public class TemplateService extends Service {
 		JSONArray json = new JSONArray();
 		EntityManagement em = new EntityManagement();
 		WordConverter wordConv = new WordConverter();
-				
+		Array2DRowRealMatrix matrix = new Array2DRowRealMatrix();
+		ToJSON converter = new ToJSON();
+						
 		try{
 			// get connection from connection pool
 			conn = dbm.getConnection();
 
 			// prepare statement
-			stmnt = conn.prepareStatement("SELECT id,content,author FROM urch;");
+			stmnt = conn.prepareStatement("SELECT id,content,author FROM urch order by author;");
 			
 			// retrieve result set
 			rs = stmnt.executeQuery();
 	
-			LinkedList<Node> nodes = em.listNodes(rs);	// listing nodes and textpreprocessing of content
-			json = wordConv.convertTFIDF(nodes);		// creating term matrix, computing tf- idf, converting to json array for visualization	
-						
+			//LinkedList<Node> nodes = em.listNodes(rs);	// listing nodes and textpreprocessing of content
+			em.createNodeTable(conn);
+			em.createGraphTable(conn);
+			
+			//persist graph built form dataset
+			Graph graph = em.persistNewGraph(rs, conn);
+			
+			Termmatrix termMat = wordConv.convertTFIDF(graph.getNodes());
+			//matrix = wordConv.convertTFIDF(nodes);		// creating term matrix, computing tf- idf, converting to json array for visualization	
+			
+			json = converter.termmatrixToJson(termMat);
+			//json = converter.termmatrixToJson(matrix);
 			return new HttpResponse(json.toString() , HttpURLConnection.HTTP_OK);
 			
 		}catch(Exception e){

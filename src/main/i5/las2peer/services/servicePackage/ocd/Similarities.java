@@ -23,5 +23,22 @@ public class Similarities {
 		
 		return res;
 	}
+	
+	public double cosineSim(ArrayRealVector v, ArrayRealVector u){
+		double res = 0;
+		double dot = 0;
+		double normV = 0;
+		double normU = 0;
+		
+		dot = v.dotProduct(u);
+		normV = v.getNorm();
+		normU = u.getNorm();
+		
+		if(normV != 0 && normU != 0){
+			res = dot / (normV * normU);
+		}
+		
+		return res;
+	}
 
 }
