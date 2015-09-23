@@ -8,7 +8,7 @@ import org.apache.commons.math3.linear.ArrayRealVector;
 
 public class Cluster {
 	
-	private LinkedList<Integer> points;
+	private LinkedList<Point> points;
 	private ArrayRealVector centroid;
 	private int id;
 	
@@ -16,11 +16,11 @@ public class Cluster {
 	////Getter and Setter////
 	/////////////////////////
 
-	public LinkedList<Integer> getPoints(){
+	public LinkedList<Point> getPoints(){
 		return this.points;
 	}
 	
-	public void setPoints(LinkedList<Integer> points){
+	public void setPoints(LinkedList<Point> points){
 		this.points = points;
 	}
 	
@@ -45,7 +45,7 @@ public class Cluster {
 	////////////////////////
 	
 	//add corresponding nodeid to the cluster for assignment of the node
-	public void assignPoint(int point){
+	public void assignPoint(Point point){
 		points.add(point);
 	}
 
