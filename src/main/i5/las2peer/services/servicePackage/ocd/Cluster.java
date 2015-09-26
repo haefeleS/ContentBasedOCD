@@ -8,7 +8,7 @@ import org.apache.commons.math3.linear.ArrayRealVector;
 
 public class Cluster {
 	
-	private LinkedList<Point> points;
+	private LinkedList<Point> points = new LinkedList<Point>();
 	private ArrayRealVector centroid;
 	private int id;
 	

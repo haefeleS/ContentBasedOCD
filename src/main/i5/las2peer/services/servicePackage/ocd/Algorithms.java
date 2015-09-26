@@ -7,7 +7,10 @@ import java.util.Random;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.ArrayRealVector;
 
-public class ClusteringMethod {
+import i5.las2peer.services.servicePackage.entities.Community;
+import i5.las2peer.services.servicePackage.entities.Cover;
+
+public class Algorithms {
 	
 	//find clustering with smallest costs, by computing sizes between 1 and maxClust
 	
@@ -24,6 +27,7 @@ public class ClusteringMethod {
 				opt = temp;
 			}
 		}
+		
 		return opt;
 	}
 	
@@ -40,9 +44,10 @@ public class ClusteringMethod {
 		//initialize clusters with centroids randomly generated
 		for(int i = 0; i < k; i++){
 			Cluster c = new Cluster();
-			ArrayRealVector cent = new ArrayRealVector();
-			for(int j = 0; j < vectorLength; j++)
-				cent.setEntry(j, (randGen.nextDouble() + randGen.nextInt()));
+			ArrayRealVector cent = new ArrayRealVector(vectorLength);
+			for(int j = 0; j < vectorLength; j++){
+				cent.setEntry(j, randGen.nextDouble());
+			}
 			c.setCentroid(cent);
 			clustering.addCluster(c);
 		}

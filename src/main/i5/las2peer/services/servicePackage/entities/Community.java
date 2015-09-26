@@ -6,6 +6,8 @@ public class Community {
 
 	private int comID;
 	
+	//private int coverID;
+	
 	private LinkedList<Node> members = new LinkedList<Node>();
 	
 	/////////////////////////
@@ -19,6 +21,13 @@ public class Community {
 	public int getCommunityID(){
 		return comID;
 	}
+	/*public void setCoverID(int cID){
+		this.coverID = cID;
+	}
+	
+	public int getCoverID(){
+		return coverID;
+	}*/
 	
 	public void setMembers(LinkedList<Node> mem){
 		this.members = mem;

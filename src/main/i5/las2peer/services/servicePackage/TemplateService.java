@@ -39,6 +39,8 @@ import i5.las2peer.services.servicePackage.entities.EntityManagement;
 import i5.las2peer.services.servicePackage.entities.Graph;
 import i5.las2peer.services.servicePackage.entities.LinkedNode;
 import i5.las2peer.services.servicePackage.entities.Node;
+import i5.las2peer.services.servicePackage.ocd.Algorithms;
+import i5.las2peer.services.servicePackage.ocd.Clustering;
 import i5.las2peer.services.servicePackage.ocd.Termmatrix;
 import i5.las2peer.services.servicePackage.preprocessing.TextProcessor;
 import i5.las2peer.services.servicePackage.preprocessing.WordConverter;
@@ -415,6 +417,7 @@ public class TemplateService extends Service {
 		WordConverter wordConv = new WordConverter();
 		Array2DRowRealMatrix matrix = new Array2DRowRealMatrix();
 		ToJSON converter = new ToJSON();
+		Algorithms alg = new Algorithms();
 						
 		try{
 			// get connection from connection pool
@@ -436,9 +439,13 @@ public class TemplateService extends Service {
 			Termmatrix termMat = wordConv.convertTFIDF(graph.getNodes());
 			//matrix = wordConv.convertTFIDF(nodes);		// creating term matrix, computing tf- idf, converting to json array for visualization	
 			
-			json = converter.termmatrixToJson(termMat);
+			Clustering clust = alg.optCosts(termMat, 2);
+			em.createCommunityTables(conn);
+			em.createCoverTable(conn);
+			em.persistCover(clust, conn);
+			//json = converter.termmatrixToJson(termMat);
 			//json = converter.termmatrixToJson(matrix);
-			return new HttpResponse(json.toString() , HttpURLConnection.HTTP_OK);
+			return new HttpResponse("New Cover created from dataset urch and persisted" , HttpURLConnection.HTTP_OK);
 			
 		}catch(Exception e){
 			

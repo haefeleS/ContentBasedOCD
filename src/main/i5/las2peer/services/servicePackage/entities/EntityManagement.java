@@ -6,10 +6,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 import i5.las2peer.restMapper.HttpResponse;
 import i5.las2peer.security.Context;
+import i5.las2peer.services.servicePackage.ocd.Cluster;
+import i5.las2peer.services.servicePackage.ocd.Clustering;
+import i5.las2peer.services.servicePackage.ocd.Point;
 
 /*import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -21,19 +25,43 @@ import i5.las2peer.services.servicePackage.preprocessing.TextProcessor;
 
 public class EntityManagement {
 	
+	//////////////////////
+	////table creation////
+	//////////////////////
+	
 	public void createNodeTable(Connection conn) throws Exception{
 		Statement stmnt = null;
 		stmnt = conn.createStatement();
 		stmnt.executeUpdate("create table if not exists node ("+ "nodeid int not null auto_increment primary key," +"userid varchar(255),"+ " content text," + "graphid int)");
-		
+		stmnt.close();
 	}
 	
 	public void createGraphTable(Connection conn) throws Exception{
 		Statement stmnt = null;
 		stmnt = conn.createStatement();
 		stmnt.executeUpdate("create table if not exists graph ("+ "graphid int not null auto_increment primary key," +"origin varchar(255))");
+		stmnt.close();
+	}
+	
+	public void createCommunityTables(Connection conn) throws Exception{
+		PreparedStatement stmnt = null;
+		stmnt = conn.prepareStatement("create table if not exists community ("+ "commid int not null auto_increment primary key," + "coverid int)");
+		stmnt.executeUpdate();
+		stmnt = conn.prepareStatement("create table if not exists membership ("+ "commid int not null,"+ "nodeid int not null," + "primary key (commid,nodeid))");
+		stmnt.executeUpdate();
+		stmnt.close();
+	}
+	
+	public void createCoverTable(Connection conn) throws Exception{
+		Statement stmnt = null;
+		stmnt = conn.createStatement();
+		stmnt.executeUpdate("create table if not exists cover(" + "coverid int not null auto_increment primary key," + "costs double)");
 		
 	}
+	
+	/////////////////////////////
+	////Persistence Functions////
+	/////////////////////////////
 	
 	public Graph persistNewGraph(ResultSet rs, Connection conn) throws Exception{
 		
@@ -46,7 +74,6 @@ public class EntityManagement {
 		    Graph graph = new Graph();
 		    String author = null;
 		    String content = "";
-		    String tempString = "";
 		    LinkedList<Node> nodes = new LinkedList<Node>();
 		    
 		    
@@ -127,8 +154,10 @@ public class EntityManagement {
 	
 	public void persistNewLinkedNode(ResultSet rs, Connection conn) throws Exception{
 		
+		PreparedStatement stmnt = null;
+		
 		try{
-		    PreparedStatement stmnt = null;
+		    
 		    int i = 0;
 		      	
 		    while(rs.next()){
@@ -157,10 +186,72 @@ public class EntityManagement {
 		
 		}catch(Exception e){
 	    	System.out.println("problem at persisting linked nodes");
-	    	
+	    	if (stmnt != null) {
+				try {
+					stmnt.close();
+				} catch (Exception ex) {
+					Context.logError(this, ex.getMessage());
+				}
+			}	    
 	    	
 	    }     
 	}
+	
+	public void persistCover(Clustering clustering, Connection conn) throws Exception{
+		PreparedStatement st = null;
+		
+		double costs = clustering.getCosts();
+		int coverid = 0;
+		int commid = 0;
+		
+		try{
+			st = conn.prepareStatement("insert into cover (costs) values(?)", Statement.RETURN_GENERATED_KEYS);
+    		st.setDouble(1, costs);
+    		st.executeUpdate();
+    		ResultSet res = st.getGeneratedKeys();
+    		if(res.next()){
+    			coverid = res.getInt(1);
+    		}
+    		  		
+    		for(Iterator<Cluster> it = clustering.getClustering().iterator(); it.hasNext();){
+    			Cluster curr = it.next();
+    			
+    			st = conn.prepareStatement("insert into community (coverid) values(?)", Statement.RETURN_GENERATED_KEYS);
+    			st.setInt(1, coverid);
+    			st.executeUpdate();
+    			ResultSet res1 = st.getGeneratedKeys();
+    			if(res1.next()){
+    				commid = res1.getInt(1);
+    			}
+    			
+    			for(Iterator<Point> iter = curr.getPoints().iterator(); iter.hasNext();){
+    				Point p = iter.next();
+    				int nodeid = p.getNodeId();
+    				st = conn.prepareStatement("insert into membership (commid , nodeid) values (?,?)");
+    				st.setInt(1, commid);
+    				st.setInt(2, nodeid);
+    				st.executeUpdate();
+    			}
+    			
+    		}
+    		st.close();
+    		
+			
+		}catch(Exception e){
+			System.out.println("problem at persisting cover");
+			if (st != null) {
+				try {
+					st.close();
+				} catch (Exception ex) {
+					Context.logError(this, ex.getMessage());
+				}
+			}	
+		}
+	}
+	
+	/////////////////////////
+	////Utility Functions////
+	/////////////////////////
 	
 	public LinkedList<Node> listNodes(ResultSet rs) throws Exception{
 		LinkedList<Node> res = new LinkedList<Node>();
